@@ -1,95 +1,74 @@
-//connect to a mysql database using mysql2
-const mysql = require('mysql2');
-const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'admin',
-    database: 'schooldb'
-});
-//connect to the database
-connection.connect((err) => {
-    if (err) {
-        console.error('Error connecting to the database:', err);
-        return;
-    }
-    console.log('Connected to the database');
-});
-//show all the tables in the database
-connection.query('SHOW TABLES', (err, results) => {
-    if (err) {
-        console.error('Error fetching tables:', err);
-        return;
-    }
-    console.log('Tables in the database:', results);
-});
-//show all the columns in the students table
-connection.query('SHOW COLUMNS FROM students', (err, results) => {
-    if (err) {
-        console.error('Error fetching columns:', err);
-        return;
-    }
-    console.log('Columns in the students table:', results);
-});
-//insert a multiple students into the students table by using the object notation
-const students = [
-    { first_name: 'John', last_name: 'kapkor', date_of_birth: '2000-02-12', grade_level: 9 },
-    { first_name: 'Jane', last_name: 'doe', date_of_birth: '2001-03-15', grade_level: 10 },
-    { first_name: 'Jim', last_name: 'beam', date_of_birth: '2002-04-20', grade_level: 11 },
-    { first_name: 'Jack', last_name: 'daniels', date_of_birth: '2003-05-25', grade_level: 12 }
+const students = require('./queries/students');
+const courses = require('./queries/courses');
+const enrollments = require('./queries/enrollments');
+const { enrollStudentIfCourseExistsOrInsertIt } = require('./queries/enrollmentHelper');
+
+
+// Sample usage
+// Adding multiple students
+const newStudents = [
+  { first_name: 'Jerome', last_name: 'Kapkor', date_of_birth: '2000-01-01', grade_level: 10 },
+  { first_name: 'Jane', last_name: 'Wairimu', date_of_birth: '2001-02-02', grade_level: 11 },
+  { first_name: 'Alice', last_name: 'Rotich', date_of_birth: '2002-03-03', grade_level: 12 },
+  { first_name: 'Bob', last_name: 'Mwangi', date_of_birth: '2003-04-04', grade_level: 9 },
+  { first_name: 'Charlie', last_name: 'Njeri', date_of_birth: '2004-05-05', grade_level: 8 },
+
 ];
-// Insert multiple students into the students table
-const sql = 'INSERT INTO students (first_name, last_name, date_of_birth, grade_level) VALUES ?';
-const values = students.map(student => [student.first_name, student.last_name, student.date_of_birth, student.grade_level]);
-connection.query(sql, [values], (err, results) => {
-    if (err) {
-        console.error('Error inserting students:', err);
-        return;
-    }
-    console.log('Inserted students:', results);
+newStudents.forEach(student => {
+  students.addStudent(student, (err, result) => {
+    if (err) console.error('Error adding student:', err);
+    else console.log('Student added:', result);
+  });
 });
-//print all the students in the students table
-connection.query('SELECT * FROM students', (err, results) => {
-    if (err) {
-        console.error('Error fetching students:', err);
-        return;
-    }
-    console.log('Students in the table:', results);
+
+// Students
+students.getAllStudents((err, results) => {
+  if (err) console.error('Error fetching students:', err);
+  else console.log('Students:', results);
 });
-//update a student in the students table
-const studentId = 1; // ID of the student to update
-const updatedStudent = { first_name: 'John', last_name: 'doe', date_of_birth: '2000-02-12', grade_level: 10 };
-const updateSql = 'UPDATE students SET first_name = ?, last_name = ?, date_of_birth = ?, grade_level = ? WHERE student_id = ?';
-connection.query(updateSql, [updatedStudent.first_name, updatedStudent.last_name, updatedStudent.date_of_birth, updatedStudent.grade_level, studentId], (err, results) => {
-    if (err) {
-        console.error('Error updating student:', err);
-        return;
-    }
-    console.log('Updated student:', results);
-}); 
-//delete a student in the students table
-const deleteStudentId = 2; // ID of the student to delete
-const deleteSql = 'DELETE FROM students WHERE student_id = ?';
-connection.query(deleteSql, [deleteStudentId], (err, results) => {
-    if (err) {
-        console.error('Error deleting student:', err);
-        return;
-    }
-    console.log('Deleted student:', results);
+
+// Adding multiple courses
+const newCourses = [
+  { course_name: 'Mathematics', instructor: 'Dr. Smith' },
+  { course_name: 'Science', instructor:'Prof. Johnson' },
+  { course_name: 'History',  instructor:'Ms. Davis' },
+  { course_name: 'Geography',instructor: 'Mr. Brown' },
+  { course_name: 'English',  instructor:'Mrs. Wilson' },
+];
+newCourses.forEach(course => {
+  courses.addCourse(course, (err, result) => {
+    if (err) console.error('Error adding course:', err);
+    else console.log('Course added:', result);
+  });
 });
-//show all the students in the students table
-connection.query('SELECT * FROM students', (err, results) => {
-    if (err) {
-        console.error('Error fetching students:', err);
-        return;
-    }
-    console.log('Students in the table:', results);
+// Courses
+courses.getAllCourses((err, results) => {
+  if (err) console.error('Error fetching courses:', err);
+  else console.log('Courses:', results);
 });
-//close the connection
-connection.end((err) => {
+
+// Adding multiple enrollments
+const newEnrollments = [
+  { student_id: 1, course_id: 1, enrollment_date: '2023-09-01' },
+  { student_id: 2, course_id: 2, enrollment_date: '2023-09-02' },
+  { student_id: 3, course_id: 3, enrollment_date: '2023-09-03' },
+  { student_id: 4, course_id: 4, enrollment_date: '2023-09-04' },
+  { student_id: 5, course_id: 5, enrollment_date: '2023-09-05' },
+];
+function enrollStudent(studentId, courseId, enrollmentDate) {
+  if (!studentId || !courseId || !enrollmentDate) {
+    console.error('Enrollment Error: Missing required fields: studentId, courseId, or enrollmentDate.');
+    return;
+  }
+
+  const query = `INSERT INTO enrollments (student_id, course_id, enrollment_date) VALUES (?, ?, ?)`;
+  connection.query(query, [studentId, courseId, enrollmentDate], (err, results) => {
     if (err) {
-        console.error('Error closing the connection:', err);
-        return;
+      console.error('Enrollment Error:', err);
+    } else {
+      console.log('Student enrolled successfully!');
     }
-    console.log('Connection closed');
-});
+  });
+}
+
 
